@@ -9,9 +9,16 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import com.itextpdf.kernel.pdf.*;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.Paragraph;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.sql.*;
+import java.util.List;
 
 public class LibraryController {
 
@@ -62,9 +69,11 @@ public class LibraryController {
     @FXML
     private TableColumn<Book, Double> netAmountColumn;
 
+    private ObservableList<Book> searchResults = FXCollections.observableArrayList();
+
     private static final String URL = "jdbc:mysql://localhost:3306/library";
     private static final String USER = "root";
-    private static final String PASSWORD = "Preethi1002@";
+    private static final String PASSWORD = "Admin@38";
 
     @FXML
     public void initialize() {
@@ -107,6 +116,19 @@ public class LibraryController {
         inputDialog.setContentText(selectedCriteria + ":");
         inputDialog.showAndWait().ifPresent(input -> fetchBooks(selectedCriteria, input));
     }
+    @FXML
+    private void openNewForm() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("new-book-form.fxml"));
+            Parent root = loader.load();
+            Stage stage = new Stage();
+            stage.setTitle("New Form");
+            stage.setScene(new Scene(root));
+            stage.show();
+        } catch (IOException e) {
+            showAlert("Error loading new form: " + e.getMessage());
+        }
+    }
 
     private void fetchBooks(String criteria, String value) {
         String columnName = switch (criteria) {
@@ -118,7 +140,7 @@ public class LibraryController {
             default -> throw new IllegalArgumentException("Invalid search criteria");
         };
 
-        ObservableList<Book> booksList = FXCollections.observableArrayList();
+        searchResults.clear();
         String query = "SELECT * FROM book WHERE " + columnName + " LIKE ?";
 
         try (Connection connection = DriverManager.getConnection(URL, USER, PASSWORD);
@@ -128,7 +150,7 @@ public class LibraryController {
             ResultSet resultSet = statement.executeQuery();
 
             while (resultSet.next()) {
-                booksList.add(new Book(
+                searchResults.add(new Book(
                         resultSet.getInt("id"),
                         resultSet.getString("semester"),
                         resultSet.getString("engg_mba"),
@@ -153,28 +175,69 @@ public class LibraryController {
                 ));
             }
 
-            booksTable.setItems(booksList);
+            booksTable.setItems(searchResults);
         } catch (SQLException e) {
             showAlert("Error fetching records: " + e.getMessage());
         }
     }
 
     @FXML
-    private void openNewForm() {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/org/preethi/lib/new-book-form.fxml"));
-            Parent root = loader.load();
-            Stage stage = new Stage();
-            stage.setScene(new Scene(root));
-            stage.show();
+    private void generateReport() {
+        if (searchResults.isEmpty()) {
+            showAlert("No search results to generate a report.");
+            return;
+        }
+
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Save Report");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF Files", "*.pdf"));
+        File file = fileChooser.showSaveDialog(new Stage());
+
+        if (file == null) {
+            showAlert("No file selected.");
+            return;
+        }
+
+        String filePath = file.getAbsolutePath();
+        if (!filePath.toLowerCase().endsWith(".pdf")) {
+            filePath += ".pdf"; // Ensure .pdf extension
+            file = new File(filePath); // Create a new File instance
+        }
+
+        if (file.exists() && !file.renameTo(file)) {
+            showAlert("File is open in another program. Close it and try again.");
+            return;
+        }
+
+        try (PdfWriter writer = new PdfWriter(new FileOutputStream(file));
+             PdfDocument pdf = new PdfDocument(writer);
+             Document document = new Document(pdf)) {
+
+            document.add(new Paragraph("Library Search Report\n\n"));
+
+            for (Book book : searchResults) {
+                document.add(new Paragraph(
+                        "ID: " + book.getId() +
+                                "\nSemester: " + book.getSemester() +
+                                "\nEngg/MBA: " + book.getEnggMba() +
+                                "\nYear: " + book.getYear() +
+                                "\nMonth: " + book.getMonth() +
+                                "\nDate of Invoice: " + book.getDateOfInvoice() +
+                                "\nPurchase Type: " + book.getPurchaseType() +
+                                "\nInvoice No: " + book.getInvoiceNo() +
+                                "\nDepartment: " + book.getDepartmentSubject() +
+                                "\nNumber of Books: " + book.getNoOfBooks() +
+                                "\nNet Amount: " + book.getNetAmount() + "\n\n"
+                ));
+            }
+
+            System.out.println("Report generated successfully: " + filePath);
         } catch (IOException e) {
-            e.printStackTrace(); // Print full error details in the console
-            showError("Error opening form: " + e.getMessage());
+            showAlert("Error generating PDF: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    private void showError(String s) {
-    }
 
 
     private void showAlert(String message) {
@@ -184,5 +247,4 @@ public class LibraryController {
         alert.setContentText(message);
         alert.showAndWait();
     }
-
 }

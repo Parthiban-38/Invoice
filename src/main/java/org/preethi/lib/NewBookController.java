@@ -1,11 +1,17 @@
-// Updated NewBookController.java
-
 package org.preethi.lib;
 
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.DatePicker;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -36,12 +42,26 @@ public class NewBookController {
     @FXML private TextField grossInvoiceAmountField;
     @FXML private TextField discountAmountField;
     @FXML private TextField netAmountField;
+    @FXML private Button saveButton;
 
     private static final String URL = "jdbc:mysql://localhost:3306/library";
     private static final String USER = "root";
-    private static final String PASSWORD = "Preethi1002@";
+    private static final String PASSWORD = "Admin@38";
 
     @FXML
+    private void handleEnter(KeyEvent event) {
+        Node source = (Node) event.getSource(); // Get the current field
+        if (event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.DOWN) {
+            // Move to the next field
+            source.fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.TAB, false, false, false, false));
+        } else if (event.getCode() == KeyCode.UP) {
+            // Move to the previous field
+            source.fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.TAB, true, false, false, false));
+        }
+    }
+
+
+        @FXML
     private void saveBook() {
         try (Connection connection = DriverManager.getConnection(URL, USER, PASSWORD);
              PreparedStatement statement = connection.prepareStatement(
@@ -111,18 +131,5 @@ public class NewBookController {
         grossInvoiceAmountField.clear();
         discountAmountField.clear();
         netAmountField.clear();
-    }
-    @FXML
-    private void openNewForm() {
-        try {
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/org/preethi/lib/new-book-form.fxml"));
-            Stage stage = new Stage();
-            Scene scene = new Scene(fxmlLoader.load(), 400, 400);
-            stage.setTitle("Add New Book");
-            stage.setScene(scene);
-            stage.show();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 }
