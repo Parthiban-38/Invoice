@@ -19,9 +19,8 @@
     <dependency>
       <groupId>com.mysql</groupId>
       <artifactId>mysql-connector-j</artifactId>
-      <version>8.2.0</version>  <!-- Use the latest version -->
+      <version>8.2.0</version>
     </dependency>
-
 
     <dependency>
       <groupId>org.openjfx</groupId>
@@ -47,21 +46,23 @@
     <!-- iTextPDF Dependencies -->
     <dependency>
       <groupId>com.itextpdf</groupId>
-      <artifactId>kernel</artifactId>
-      <version>7.2.3</version>
+      <artifactId>layout</artifactId>
+      <version>7.2.5</version>  <!-- Update to the latest version -->
     </dependency>
+
     <dependency>
       <groupId>com.itextpdf</groupId>
-      <artifactId>layout</artifactId>
-      <version>7.2.3</version>
+      <artifactId>kernel</artifactId>
+      <version>7.2.5</version>
     </dependency>
+
     <dependency>
       <groupId>com.itextpdf</groupId>
       <artifactId>io</artifactId>
-      <version>7.2.3</version>
+      <version>7.2.5</version>
     </dependency>
-  </dependencies>
 
+  </dependencies>
 
   <build>
     <plugins>
@@ -92,7 +93,6 @@
           <mainClass>org.preethi.lib.LibraryManagementApp</mainClass>
         </configuration>
       </plugin>
-
     </plugins>
   </build>
 </project>

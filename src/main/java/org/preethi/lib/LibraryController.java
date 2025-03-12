@@ -3,6 +3,9 @@ package org.preethi.lib;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import com.itextpdf.layout.element.Table;
+import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.properties.UnitValue;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -183,60 +186,95 @@ public class LibraryController {
 
     @FXML
     private void generateReport() {
-        if (searchResults.isEmpty()) {
-            showAlert("No search results to generate a report.");
+        if (searchResults == null || searchResults.isEmpty()) {
+            showAlert("No search results to generate a report.", Alert.AlertType.WARNING);
             return;
         }
 
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Save Report");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF Files", "*.pdf"));
-        File file = fileChooser.showSaveDialog(new Stage());
+        // Get user's default Downloads folder
+        String userHome = System.getProperty("user.home");
+        String downloadsPath = userHome + File.separator + "Downloads";
+        String fileName = "Library_Report_" + System.currentTimeMillis() + ".pdf";
+        File file = new File(downloadsPath, fileName);
 
-        if (file == null) {
-            showAlert("No file selected.");
-            return;
-        }
+        try {
+            System.out.println("Creating PDF file at: " + file.getAbsolutePath());
 
-        String filePath = file.getAbsolutePath();
-        if (!filePath.toLowerCase().endsWith(".pdf")) {
-            filePath += ".pdf"; // Ensure .pdf extension
-            file = new File(filePath); // Create a new File instance
-        }
+            try (PdfWriter writer = new PdfWriter(new FileOutputStream(file));
+                 PdfDocument pdf = new PdfDocument(writer);
+                 Document document = new Document(pdf)) {
 
-        if (file.exists() && !file.renameTo(file)) {
-            showAlert("File is open in another program. Close it and try again.");
-            return;
-        }
+                document.add(new Paragraph("Library Search Report")
+                        .setBold()
+                        .setFontSize(16)
+                        .setUnderline()
+                        .setMarginBottom(10));
 
-        try (PdfWriter writer = new PdfWriter(new FileOutputStream(file));
-             PdfDocument pdf = new PdfDocument(writer);
-             Document document = new Document(pdf)) {
+                float[] columnWidths = {30f, 60f, 60f, 30f, 40f, 60f, 60f, 60f, 60f, 40f, 40f, 40f, 40f, 40f, 60f, 40f, 40f, 40f, 60f, 60f, 60f};
+                Table table = new Table(UnitValue.createPointArray(columnWidths)).useAllAvailableWidth();
 
-            document.add(new Paragraph("Library Search Report\n\n"));
+                String[] headers = {"ID", "Semester", "Engg/MBA", "Year", "Month", "Date of Invoice",
+                        "Purchase Type", "Invoice No", "Department", "Accn No From", "Accn No To",
+                        "Books Count", "Purchased", "Donated", "Acc Reg No", "Page No From",
+                        "Page No To", "Discount %", "Gross Amount", "Discount Amt", "Net Amount"};
 
-            for (Book book : searchResults) {
-                document.add(new Paragraph(
-                        "ID: " + book.getId() +
-                                "\nSemester: " + book.getSemester() +
-                                "\nEngg/MBA: " + book.getEnggMba() +
-                                "\nYear: " + book.getYear() +
-                                "\nMonth: " + book.getMonth() +
-                                "\nDate of Invoice: " + book.getDateOfInvoice() +
-                                "\nPurchase Type: " + book.getPurchaseType() +
-                                "\nInvoice No: " + book.getInvoiceNo() +
-                                "\nDepartment: " + book.getDepartmentSubject() +
-                                "\nNumber of Books: " + book.getNoOfBooks() +
-                                "\nNet Amount: " + book.getNetAmount() + "\n\n"
-                ));
+                for (String header : headers) {
+                    table.addHeaderCell(new Cell().add(new Paragraph(header).setBold()));
+                }
+
+                for (Book book : searchResults) {
+                    table.addCell(new Cell().add(new Paragraph(String.valueOf(book.getId()))));
+                    table.addCell(new Cell().add(new Paragraph(book.getSemester())));
+                    table.addCell(new Cell().add(new Paragraph(book.getEnggMba())));
+                    table.addCell(new Cell().add(new Paragraph(String.valueOf(book.getYear()))));
+                    table.addCell(new Cell().add(new Paragraph(book.getMonth())));
+                    table.addCell(new Cell().add(new Paragraph(book.getDateOfInvoice())));
+                    table.addCell(new Cell().add(new Paragraph(book.getPurchaseType())));
+                    table.addCell(new Cell().add(new Paragraph(book.getInvoiceNo())));
+                    table.addCell(new Cell().add(new Paragraph(book.getDepartmentSubject())));
+                    table.addCell(new Cell().add(new Paragraph(String.valueOf(book.getBookAccnNoFrom()))));
+                    table.addCell(new Cell().add(new Paragraph(String.valueOf(book.getBookAccnNoTo()))));
+                    table.addCell(new Cell().add(new Paragraph(String.valueOf(book.getNoOfBooks()))));
+                    table.addCell(new Cell().add(new Paragraph(String.valueOf(book.getNoOfBooksPurchased()))));
+                    table.addCell(new Cell().add(new Paragraph(String.valueOf(book.getNoOfBooksDonated()))));
+                    table.addCell(new Cell().add(new Paragraph(book.getAccRegNo())));
+                    table.addCell(new Cell().add(new Paragraph(String.valueOf(book.getAccnRegisterPageNoFrom()))));
+                    table.addCell(new Cell().add(new Paragraph(String.valueOf(book.getAccnRegisterPageNoTo()))));
+                    table.addCell(new Cell().add(new Paragraph(String.valueOf(book.getDiscountPercentage()))));
+                    table.addCell(new Cell().add(new Paragraph(String.valueOf(book.getGrossInvoiceAmount()))));
+                    table.addCell(new Cell().add(new Paragraph(String.valueOf(book.getDiscountAmount()))));
+                    table.addCell(new Cell().add(new Paragraph(String.valueOf(book.getNetAmount()))));
+                }
+
+                document.add(table);
+                System.out.println("PDF created successfully: " + file.getAbsolutePath());
             }
 
-            System.out.println("Report generated successfully: " + filePath);
+            // Check if the file was created successfully before displaying success message
+            if (file.exists()) {
+                showAlert("Report successfully saved to Downloads folder:\n" + file.getAbsolutePath(), Alert.AlertType.INFORMATION);
+            } else {
+                showAlert("Error: File was not created.", Alert.AlertType.ERROR);
+            }
+
         } catch (IOException e) {
-            showAlert("Error generating PDF: " + e.getMessage());
+            showAlert("Error generating PDF: " + e.getMessage(), Alert.AlertType.ERROR);
             e.printStackTrace();
         }
     }
+
+    // Generic alert method with different alert types
+    private void showAlert(String message, Alert.AlertType alertType) {
+        Alert alert = new Alert(alertType);
+        alert.setTitle(alertType == Alert.AlertType.ERROR ? "Error" : "Notification");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+
+
+
 
 
 
