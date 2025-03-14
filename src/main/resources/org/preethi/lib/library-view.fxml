@@ -1,52 +1,68 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.control.ComboBox?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.TableView?>
-<?import javafx.scene.control.TableColumn?>
-<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.control.*?>
 
-<VBox spacing="20" alignment="CENTER" xmlns="http://javafx.com/javafx"
-      xmlns:fx="http://javafx.com/fxml" fx:controller="org.preethi.lib.LibraryController">
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.preethi.lib.LibraryController">
 
-  <Label text="Saranathan College of Engineering" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
-  <Label text="Autonomous Institution" style="-fx-font-size: 16px; -fx-font-style: italic;"/>
+  <!-- Title -->
+  <VBox spacing="5" alignment="CENTER">
+    <Label text="Saranathan College of Engineering" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+    <Label text="Autonomous Institution" style="-fx-font-size: 16px; -fx-font-style: italic;"/>
+  </VBox>
 
+  <!-- Search Criteria -->
   <HBox spacing="10" alignment="CENTER">
-    <ComboBox fx:id="searchCriteriaBox" promptText="Select Search Criteria"/>
-    <Button text="Search" onAction="#handleSearch"/>
-    <Button text="Upload"/>
-    <Button text="New" onAction="#openNewForm"/>
-    <Button text="Generate Report" onAction="#generateReport" />
+    <ComboBox fx:id="searchCriteriaBox" promptText="Select Search Criteria" onAction="#updateSubCriteria"/>
+    <ComboBox fx:id="semesterTypeBox" promptText="ODD/EVEN" disable="true" onAction="#updateYearOptions"/>
+    <ComboBox fx:id="yearBox" promptText="Year" disable="true" onAction="#handleSearch"/>
   </HBox>
 
-  <!-- Table to Display Search Results -->
-  <TableView fx:id="booksTable" prefHeight="300" prefWidth="850">
+  <HBox spacing="40" alignment="CENTER">
+    <!-- Purchase Type Section -->
+    <VBox spacing="5">
+      <Label text="Purchase Type" style="-fx-font-weight: bold;"/>
+      <MenuButton text="Select Purchase Type" fx:id="purchaseMenu">
+        <items>
+          <CheckMenuItem text="Purchase" onAction="#handleSearch"/>
+          <CheckMenuItem text="Specimen" onAction="#handleSearch"/>
+          <CheckMenuItem text="Donation" onAction="#handleSearch"/>
+        </items>
+      </MenuButton>
+    </VBox>
+
+    <!-- Department Section -->
+    <VBox spacing="5">
+      <Label text="Department" style="-fx-font-weight: bold;"/>
+      <MenuButton text="Select Department" fx:id="departmentMenu">
+        <items>
+          <CheckMenuItem text="ALL" onAction="#handleSearch"/>
+          <CheckMenuItem text="CSE" onAction="#handleSearch"/>
+          <CheckMenuItem text="CSE AIML" onAction="#handleSearch"/>
+          <CheckMenuItem text="CSBS" onAction="#handleSearch"/>
+          <CheckMenuItem text="EEE" onAction="#handleSearch"/>
+          <CheckMenuItem text="MECH" onAction="#handleSearch"/>
+          <CheckMenuItem text="CIVIL" onAction="#handleSearch"/>
+          <CheckMenuItem text="IT" onAction="#handleSearch"/>
+          <CheckMenuItem text="ICE" onAction="#handleSearch"/>
+        </items>
+      </MenuButton>
+    </VBox>
+  </HBox>
+
+  <!-- Button for Report Generation -->
+  <Button text="Generate Report" onAction="#generateReport" style="-fx-font-size: 14px;"/>
+
+  <!-- Table View (Results) -->
+  <TableView fx:id="booksTable" prefHeight="300" prefWidth="900">
     <columns>
       <TableColumn text="ID" fx:id="idColumn" prefWidth="50"/>
-      <TableColumn text="Semester" fx:id="semesterColumn" prefWidth="100"/>
-      <TableColumn text="Engg/MBA" fx:id="enggMbaColumn" prefWidth="100"/>
-      <TableColumn text="Year" fx:id="yearColumn" prefWidth="80"/>
-      <TableColumn text="Month" fx:id="monthColumn" prefWidth="80"/>
-      <TableColumn text="Date of Invoice" fx:id="dateOfInvoiceColumn" prefWidth="120"/>
-      <TableColumn text="Purchase Type" fx:id="purchaseTypeColumn" prefWidth="100"/>
-      <TableColumn text="Invoice No" fx:id="invoiceNoColumn" prefWidth="100"/>
-      <TableColumn text="Department" fx:id="departmentSubjectColumn" prefWidth="150"/>
-      <TableColumn text="Book Accn No (From)" fx:id="bookAccnNoFromColumn" prefWidth="100"/>
-      <TableColumn text="Book Accn No (To)" fx:id="bookAccnNoToColumn" prefWidth="100"/>
-      <TableColumn text="No. of Books" fx:id="noOfBooksColumn" prefWidth="80"/>
-      <TableColumn text="No. Purchased" fx:id="noOfBooksPurchasedColumn" prefWidth="100"/>
-      <TableColumn text="No. Donated" fx:id="noOfBooksDonatedColumn" prefWidth="100"/>
-      <TableColumn text="Acc Reg No" fx:id="accRegNoColumn" prefWidth="100"/>
-      <TableColumn text="Accn Reg Page (From)" fx:id="accnRegisterPageNoFromColumn" prefWidth="120"/>
-      <TableColumn text="Accn Reg Page (To)" fx:id="accnRegisterPageNoToColumn" prefWidth="120"/>
-      <TableColumn text="Discount (%)" fx:id="discountPercentageColumn" prefWidth="80"/>
-      <TableColumn text="Gross Invoice Amount" fx:id="grossInvoiceAmountColumn" prefWidth="120"/>
-      <TableColumn text="Discount Amount" fx:id="discountAmountColumn" prefWidth="120"/>
-      <TableColumn text="Net Amount" fx:id="netAmountColumn" prefWidth="120"/>
+      <TableColumn text="Semester" fx:id="semesterColumn" prefWidth="120"/>
+      <TableColumn text="Department" fx:id="departmentSubjectColumn" prefWidth="180"/>
+      <TableColumn text="Purchase Type" fx:id="purchaseTypeColumn" prefWidth="180"/>
     </columns>
   </TableView>
-
 
 </VBox>
