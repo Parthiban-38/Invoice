@@ -10,21 +10,18 @@ import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.properties.UnitValue;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class LibraryController {
 
     @FXML
-    private ComboBox<String> searchCriteriaBox, semesterTypeBox, yearBox;
-
-    @FXML
-    private MenuButton departmentMenu, purchaseMenu;
+    private MenuButton semesterMenu, yearMenu, purchaseMenu, departmentMenu;
 
     @FXML
     private TableView<Book> booksTable;
@@ -32,94 +29,69 @@ public class LibraryController {
     private TableColumn<Book, Integer> idColumn;
     @FXML
     private TableColumn<Book, String> semesterColumn, departmentSubjectColumn, purchaseTypeColumn;
+    @FXML
+    private TableColumn<Book, String> invoiceNoColumn, supplierColumn;
+    @FXML
+    private TableColumn<Book, Double> netAmountColumn;
+
+    @FXML
+    private Label selectedCriteriaLabel;
 
     private ObservableList<Book> searchResults = FXCollections.observableArrayList();
 
     private static final String URL = "jdbc:mysql://localhost:3306/library";
-    private static final String USER = "root";  // Change to your actual MySQL username
-    private static final String PASSWORD = "Admin@38";  // Change to your actual password
-
+    private static final String USER = "root";
+    private static final String PASSWORD = "Admin@38";
 
     @FXML
     public void initialize() {
-        searchCriteriaBox.setItems(FXCollections.observableArrayList("SEMESTER", "PURCHASE TYPE", "DEPARTMENT"));
-        semesterTypeBox.setDisable(true);
-        yearBox.setDisable(true);
-
-        searchCriteriaBox.setOnAction(event -> updateSubCriteria());
-        semesterTypeBox.setOnAction(event -> updateYearOptions());
-        yearBox.setOnAction(event -> handleSearch());
+        semesterMenu.getItems().forEach(item -> ((CheckMenuItem) item).setOnAction(event -> handleSearch()));
+        yearMenu.getItems().forEach(item -> ((CheckMenuItem) item).setOnAction(event -> handleSearch()));
+        purchaseMenu.getItems().forEach(item -> ((CheckMenuItem) item).setOnAction(event -> handleSearch()));
+        departmentMenu.getItems().forEach(item -> ((CheckMenuItem) item).setOnAction(event -> handleSearch()));
 
         // Initialize Table Columns
         idColumn.setCellValueFactory(cellData -> cellData.getValue().idProperty().asObject());
         semesterColumn.setCellValueFactory(cellData -> cellData.getValue().semesterProperty());
         departmentSubjectColumn.setCellValueFactory(cellData -> cellData.getValue().departmentSubjectProperty());
         purchaseTypeColumn.setCellValueFactory(cellData -> cellData.getValue().purchaseTypeProperty());
-
-        // Add event listeners to CheckMenuItems inside MenuButton
-        departmentMenu.getItems().forEach(item -> ((CheckMenuItem) item).setOnAction(event -> handleSearch()));
-        purchaseMenu.getItems().forEach(item -> ((CheckMenuItem) item).setOnAction(event -> handleSearch()));
-    }
-
-    @FXML
-    private void updateSubCriteria() {
-        String selectedCategory = searchCriteriaBox.getValue();
-        semesterTypeBox.setDisable(!"SEMESTER".equals(selectedCategory));
-        yearBox.setDisable(true);
-        semesterTypeBox.getSelectionModel().clearSelection();
-        yearBox.getSelectionModel().clearSelection();
-
-        if ("SEMESTER".equals(selectedCategory)) {
-            semesterTypeBox.setItems(FXCollections.observableArrayList("ODD", "EVEN"));
-        }
-    }
-
-    @FXML
-    private void updateYearOptions() {
-        String selectedSemester = semesterTypeBox.getValue();
-        yearBox.setDisable(selectedSemester == null);
-
-        if (selectedSemester != null) {
-            yearBox.setItems(FXCollections.observableArrayList("2024", "2025"));
-        }
+        invoiceNoColumn.setCellValueFactory(cellData -> cellData.getValue().invoiceNoProperty());
+        supplierColumn.setCellValueFactory(cellData -> cellData.getValue().supplierProperty());
+        netAmountColumn.setCellValueFactory(cellData -> cellData.getValue().netAmountProperty().asObject());
     }
 
     @FXML
     private void handleSearch() {
+        List<String> criteriaList = new ArrayList<>();
         List<String> conditions = new ArrayList<>();
         List<String> values = new ArrayList<>();
 
-        // Semester filter
-        String selectedSemester = semesterTypeBox.getValue();
-        String selectedYear = yearBox.getValue();
-        if (selectedSemester != null && selectedYear != null) {
-            conditions.add("semester LIKE ?");
-            values.add(selectedSemester + " (" + selectedYear + ")");
-        }
+        // Update menu button text dynamically
+        updateMenuButtonText(semesterMenu);
+        updateMenuButtonText(yearMenu);
+        updateMenuButtonText(purchaseMenu);
+        updateMenuButtonText(departmentMenu);
 
-        // Purchase Type filter
-        List<String> selectedPurchaseTypes = getSelectedFromMenu(purchaseMenu);
-        if (!selectedPurchaseTypes.isEmpty()) {
-            String placeholders = String.join(",", selectedPurchaseTypes.stream().map(p -> "?").toArray(String[]::new));
-            conditions.add("purchase_type IN (" + placeholders + ")");
-            values.addAll(selectedPurchaseTypes);
-        }
+        // Collect selected filters
+        addSelectedCriteria(criteriaList, conditions, values, "Semester", semesterMenu, "semester");
+        addSelectedCriteria(criteriaList, conditions, values, "Year", yearMenu, "year");
+        addSelectedCriteria(criteriaList, conditions, values, "Purchase Type", purchaseMenu, "purchase_type");
+        addSelectedCriteria(criteriaList, conditions, values, "Department", departmentMenu, "department_subject");
 
-        // Department filter
-        List<String> selectedDepartments = getSelectedFromMenu(departmentMenu);
-        if (!selectedDepartments.isEmpty()) {
-            String placeholders = String.join(",", selectedDepartments.stream().map(d -> "?").toArray(String[]::new));
-            conditions.add("department_subject IN (" + placeholders + ")");
-            values.addAll(selectedDepartments);
-        }
+        selectedCriteriaLabel.setText(criteriaList.isEmpty() ? "None" : String.join(", ", criteriaList));
 
         if (conditions.isEmpty()) {
             showAlert("Please select at least one filter.", Alert.AlertType.WARNING);
             return;
         }
 
+        // Construct the final SQL query
+        String query = "SELECT id, semester, department_subject, purchase_type, invoiceno , nameofsupplier , netamount FROM lib2024";
+        if (!conditions.isEmpty()) {
+            query += " WHERE " + String.join(" AND ", conditions);
+        }
+
         searchResults.clear();
-        String query = "SELECT * FROM book WHERE " + String.join(" AND ", conditions);
 
         try (Connection connection = DriverManager.getConnection(URL, USER, PASSWORD);
              PreparedStatement statement = connection.prepareStatement(query)) {
@@ -134,7 +106,10 @@ public class LibraryController {
                         resultSet.getInt("id"),
                         resultSet.getString("semester"),
                         resultSet.getString("department_subject"),
-                        resultSet.getString("purchase_type")
+                        resultSet.getString("purchase_type"),
+                        resultSet.getString("invoiceno"),
+                        resultSet.getString("nameofsupplier"),
+                        resultSet.getDouble("netamount")
                 ));
             }
 
@@ -142,6 +117,38 @@ public class LibraryController {
         } catch (SQLException e) {
             showAlert("Error fetching records: " + e.getMessage(), Alert.AlertType.ERROR);
         }
+    }
+
+    private void addSelectedCriteria(List<String> criteriaList, List<String> conditions, List<String> values,
+                                     String label, MenuButton menu, String dbColumn) {
+        List<String> selected = getSelectedFromMenu(menu);
+        if (!selected.isEmpty()) {
+            criteriaList.add(label + ": " + String.join("/", selected));
+
+            // Correcting SQL IN clause formatting
+            String placeholders = selected.stream().map(s -> "?").collect(Collectors.joining(", "));
+            conditions.add(dbColumn + " IN (" + placeholders + ")");
+            values.addAll(selected);
+        }
+    }
+
+    private void updateMenuButtonText(MenuButton menuButton) {
+        List<String> selectedItems = getSelectedFromMenu(menuButton);
+        if (selectedItems.isEmpty()) {
+            menuButton.setText("Select " + menuButton.getText().split(" ")[1]);
+        } else {
+            menuButton.setText(String.join(", ", selectedItems));
+        }
+    }
+
+    private List<String> getSelectedFromMenu(MenuButton menu) {
+        List<String> selected = new ArrayList<>();
+        for (MenuItem item : menu.getItems()) {
+            if (item instanceof CheckMenuItem checkItem && checkItem.isSelected()) {
+                selected.add(checkItem.getText());
+            }
+        }
+        return selected;
     }
 
     @FXML
@@ -166,10 +173,10 @@ public class LibraryController {
                     .setUnderline()
                     .setMarginBottom(10));
 
-            float[] columnWidths = {50f, 100f, 150f, 100f};
+            float[] columnWidths = {50f, 100f, 150f, 100f, 100f, 100f, 100f};
             Table table = new Table(UnitValue.createPointArray(columnWidths)).useAllAvailableWidth();
 
-            String[] headers = {"ID", "Semester", "Department", "Purchase Type"};
+            String[] headers = {"ID", "Semester", "Department", "Purchase Type", "Invoice No", "Supplier", "Net Amount"};
             for (String header : headers) {
                 table.addHeaderCell(new Cell().add(new Paragraph(header).setBold()));
             }
@@ -179,6 +186,9 @@ public class LibraryController {
                 table.addCell(new Cell().add(new Paragraph(book.getSemester())));
                 table.addCell(new Cell().add(new Paragraph(book.getDepartmentSubject())));
                 table.addCell(new Cell().add(new Paragraph(book.getPurchaseType())));
+                table.addCell(new Cell().add(new Paragraph(book.getInvoiceNo())));
+                table.addCell(new Cell().add(new Paragraph(book.getSupplier())));
+                table.addCell(new Cell().add(new Paragraph(String.valueOf(book.getNetAmount()))));
             }
 
             document.add(table);
@@ -188,18 +198,6 @@ public class LibraryController {
             showAlert("Error generating PDF: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
-
-    private List<String> getSelectedFromMenu(MenuButton menu) {
-        List<String> selected = new ArrayList<>();
-        for (MenuItem item : menu.getItems()) {
-            CheckMenuItem checkItem = (CheckMenuItem) item;
-            if (checkItem.isSelected()) {
-                selected.add(checkItem.getText());
-            }
-        }
-        return selected;
-    }
-
     private void showAlert(String message, Alert.AlertType alertType) {
         Alert alert = new Alert(alertType);
         alert.setTitle(alertType == Alert.AlertType.ERROR ? "Error" : "Notification");
